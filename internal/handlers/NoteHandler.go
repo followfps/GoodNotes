@@ -20,13 +20,21 @@ func NewNoteHandler(serviceContainer *services.ServicesContainer) *NoteHandler {
 	return &NoteHandler{ServiceContaner: serviceContainer}
 }
 
-func (h *NoteHandler) CreateNote(c *gin.Context) error {
+func (h *NoteHandler) CreateNote(c *gin.Context, id uuid.UUID) error {
 	var note models.Note
 	//распаковка запроса
 	if err := c.ShouldBindJSON(&note); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
 	}
+
+	user, err := h.ServiceContaner.UserService.FindUserById(id)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return err
+	}
+	
+	note.CreatedBy = user.UserID
 
 	//создание уникального префикса для ноты
 	note.FilePrefix = uuid.NewString()
@@ -92,7 +100,7 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 func (h *NoteHandler) AddFileToNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
 
 	//поиск юзера
-	user, err := h.ServiceContaner.UserService.FindUserById(userID)
+	user, err := h.ServiceContaner.UserService.FindUserById(*userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error, user not found": err.Error()})
 		return err

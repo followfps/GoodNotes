@@ -29,8 +29,12 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 
 		})
 
-		noteGroup.Use(Middlewares.Middlewares()).POST("/create", func(c *gin.Context) {
-			err := handler.CreateNote(c)
+		noteGroup.Use(Middlewares.Middlewares()).POST("/create/:userID", func(c *gin.Context) {
+
+			id := c.Param("userID")
+			userID := uuid.MustParse(id)
+
+			err := handler.CreateNote(c, userID)
 			if err != nil {
 				fmt.Println(err, "Note not found")
 				return

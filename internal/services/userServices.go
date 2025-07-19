@@ -12,7 +12,7 @@ type UserService interface {
 	EmailExists(email string) (bool, error)
 	FindUserByEmail(email string) (*models.Users, error)
 	ValidationEmailCheck(email string) error
-	FindUserById(id *uuid.UUID) (*models.Users, error)
+	FindUserById(id uuid.UUID) (*models.Users, error)
 }
 
 type userServiceImpl struct {
