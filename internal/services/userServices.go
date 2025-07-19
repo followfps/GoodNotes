@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"note1/internal/models"
 	"note1/internal/repositories"
 )
@@ -10,8 +10,9 @@ import (
 type UserService interface {
 	CreateUser(user *models.Users) error
 	EmailExists(email string) (bool, error)
-	FindUserByEmail(c *gin.Context, email string) (*models.Users, error)
+	FindUserByEmail(email string) (*models.Users, error)
 	ValidationEmailCheck(email string) error
+	FindUserById(id *uuid.UUID) (*models.Users, error)
 }
 
 type userServiceImpl struct {
@@ -30,7 +31,7 @@ func (u *userServiceImpl) EmailExists(email string) (bool, error) {
 	return u.repo.EmailExists(email)
 }
 
-func (u *userServiceImpl) FindUserByEmail(c *gin.Context, email string) (*models.Users, error) {
+func (u *userServiceImpl) FindUserByEmail(email string) (*models.Users, error) {
 	return u.repo.FindUserByEmail(email)
 }
 
@@ -39,4 +40,8 @@ func (u *userServiceImpl) ValidationEmailCheck(email string) error {
 		return errors.New("email dont validate")
 	}
 	return nil
+}
+
+func (u *userServiceImpl) FindUserById(id *uuid.UUID) (*models.Users, error) {
+	return u.repo.FindUserByID(*id)
 }

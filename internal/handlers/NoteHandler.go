@@ -1,8 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/minio/minio-go/v7"
 	"net/http"
+	"note1/internal/config"
 	"note1/internal/models"
 	"note1/internal/services"
 	"strconv"
@@ -24,12 +28,15 @@ func (h *NoteHandler) CreateNote(c *gin.Context) error {
 		return err
 	}
 
+	//создание уникального префикса для ноты
+	note.FilePrefix = uuid.NewString()
+
 	//Создание note в бд
 	if err := h.ServiceContaner.NoteService.CreateNote(&note); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
 	}
-	c.JSON(http.StatusCreated, "note created")
+	c.JSON(http.StatusCreated, note.FilePrefix+"note created")
 
 	// получаю юзера который создаёт (как получить юзера вопрос)
 	// передаю бакет
@@ -81,3 +88,49 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 
 	return nil
 }
+
+func (h *NoteHandler) AddFileToNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
+
+	//поиск юзера
+	user, err := h.ServiceContaner.UserService.FindUserById(userID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error, user not found": err.Error()})
+		return err
+	}
+
+	//получиение файлов из тела запроса
+	files := c.Request.MultipartForm.File["file"]
+
+	//цикл для записи файлов в minio
+	for _, fileHeader := range files {
+		//открытие текущего файла
+		file, err := fileHeader.Open()
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return err
+		}
+		//закрытие файла после загрузки
+		defer file.Close()
+
+		//помещение файла в minio
+		_, err = config.MinioClient.PutObject(
+			c,
+			user.BucketName,
+			fmt.Sprintf("%s_%s", filePrefix, fileHeader.Filename),
+			file,
+			fileHeader.Size,
+			minio.PutObjectOptions{},
+		)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return err
+		}
+	}
+	c.AbortWithStatusJSON(http.StatusCreated, "files added successfully")
+	return nil
+
+}
+
+//func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
+//
+//}

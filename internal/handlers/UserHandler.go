@@ -28,7 +28,7 @@ func (u *UserHandler) Login(c *gin.Context, email string, password string) bool 
 	//Подгрузка соли из env
 	jwtSecretKey := os.Getenv("JWT_SECRET_KEY")
 	//поиск юзера по Email
-	user, err := u.ServiceContaner.UserService.FindUserByEmail(c, email)
+	user, err := u.ServiceContaner.UserService.FindUserByEmail(email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return false

@@ -3,6 +3,8 @@ package routes
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"net/http"
 	"note1/internal/Middlewares"
 	"note1/internal/handlers"
 	"note1/internal/services"
@@ -43,6 +45,32 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 				fmt.Println(err, "Note not found")
 				return
 			}
+		})
+
+		noteGroup.Use(Middlewares.Middlewares()).POST("/upload", func(c *gin.Context) {
+
+			userIDStr := c.Query("userID")
+			if userIDStr == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "no userID"})
+				return
+			}
+
+			userID, err := uuid.Parse(userIDStr)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userID"})
+			}
+
+			filePrefix := c.Query("filePrefix")
+			if filePrefix == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "no filePrefix"})
+				return
+			}
+
+			err = handler.AddFileToNote(c, &userID, filePrefix)
+			if err != nil {
+				return
+			}
+
 		})
 	}
 }
