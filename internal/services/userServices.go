@@ -42,6 +42,6 @@ func (u *userServiceImpl) ValidationEmailCheck(email string) error {
 	return nil
 }
 
-func (u *userServiceImpl) FindUserById(id *uuid.UUID) (*models.Users, error) {
-	return u.repo.FindUserByID(*id)
+func (u *userServiceImpl) FindUserById(id uuid.UUID) (*models.Users, error) {
+	return u.repo.FindUserByID(id)
 }

@@ -11,7 +11,7 @@ type Users struct {
 	Email      string `gorm:"unique"`
 	Password   string
 	BucketName string
-	UserID     uuid.UUID `gorm:"unique"`
+	UserID     uuid.UUID `gorm:"unique" json:"user_id,omitempty"`
 }
 
 func (u *Users) GetName() string {
@@ -29,3 +29,5 @@ func (u *Users) GetPass() string {
 func (u *Users) GetBucketName() string {
 	return u.BucketName
 }
+
+func (u *Users) GetUserID() uuid.UUID { return u.UserID }

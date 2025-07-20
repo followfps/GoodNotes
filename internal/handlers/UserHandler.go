@@ -119,7 +119,10 @@ func (u *UserHandler) Register(c *gin.Context) error {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
 	}
+
+	userIDTemp := user.UserID.String()
 	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, gin.H{"user": userIDTemp})
 	return nil
 }
 

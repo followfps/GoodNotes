@@ -70,7 +70,7 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 				return
 			}
 
-			err = handler.AddFileToNote(c, &userID, filePrefix)
+			err = handler.AddFileToNote(c, userID, filePrefix)
 			if err != nil {
 				return
 			}

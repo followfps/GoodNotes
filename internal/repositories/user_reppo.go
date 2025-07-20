@@ -104,7 +104,7 @@ func (u *GORMUserRepository) ValidationEmailCheck(email string) bool {
 
 func (u *GORMUserRepository) FindUserByID(ID uuid.UUID) (*models.Users, error) {
 	user := &models.Users{}
-	err := u.db.Where("UserID = ?", ID).First(&user).Error
+	err := u.db.Where("user_id = ?", ID).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

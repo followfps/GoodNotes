@@ -33,7 +33,7 @@ func (h *NoteHandler) CreateNote(c *gin.Context, id uuid.UUID) error {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		return err
 	}
-	
+
 	note.CreatedBy = user.UserID
 
 	//создание уникального префикса для ноты
@@ -97,12 +97,19 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 	return nil
 }
 
-func (h *NoteHandler) AddFileToNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
+func (h *NoteHandler) AddFileToNote(c *gin.Context, userID uuid.UUID, filePrefix string) error {
 
 	//поиск юзера
-	user, err := h.ServiceContaner.UserService.FindUserById(*userID)
+	user, err := h.ServiceContaner.UserService.FindUserById(userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error, user not found": err.Error()})
+		return err
+	}
+
+	// Проверка и парсинг multipart/form-data
+	err = c.Request.ParseMultipartForm(10 << 20) // 10 MB
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to parse multipart form"})
 		return err
 	}
 
