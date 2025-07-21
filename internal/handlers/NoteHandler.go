@@ -15,11 +15,11 @@ import (
 )
 
 type NoteHandler struct {
-	ServiceContaner *services.ServicesContainer
+	ServiceContainer *services.ServicesContainer
 }
 
 func NewNoteHandler(serviceContainer *services.ServicesContainer) *NoteHandler {
-	return &NoteHandler{ServiceContaner: serviceContainer}
+	return &NoteHandler{ServiceContainer: serviceContainer}
 }
 
 func (h *NoteHandler) CreateNote(c *gin.Context, id *uuid.UUID) error {
@@ -30,7 +30,7 @@ func (h *NoteHandler) CreateNote(c *gin.Context, id *uuid.UUID) error {
 		return err
 	}
 
-	user, err := h.ServiceContaner.UserService.FindUserById(id)
+	user, err := h.ServiceContainer.UserService.FindUserById(id)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		return err
@@ -42,7 +42,7 @@ func (h *NoteHandler) CreateNote(c *gin.Context, id *uuid.UUID) error {
 	note.FilePrefix = uuid.NewString()
 
 	//Создание note в бд
-	if err := h.ServiceContaner.NoteService.CreateNote(&note); err != nil {
+	if err := h.ServiceContainer.NoteService.CreateNote(&note); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
 	}
@@ -68,7 +68,7 @@ func (h *NoteHandler) GetNoteByID(c *gin.Context, id string) error {
 
 	uintId := uint(noteID)
 
-	note, err = h.ServiceContaner.NoteService.GetNoteByID(uintId)
+	note, err = h.ServiceContainer.NoteService.GetNoteByID(uintId)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
@@ -88,7 +88,7 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 
 	uintID := uint(noteID)
 
-	err = h.ServiceContaner.NoteService.DeleteNote(uintID)
+	err = h.ServiceContainer.NoteService.DeleteNote(uintID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
@@ -102,7 +102,7 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 func (h *NoteHandler) AddFileToNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
 
 	//поиск юзера
-	user, err := h.ServiceContaner.UserService.FindUserById(userID)
+	user, err := h.ServiceContainer.UserService.FindUserById(userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error, user not found": err.Error()})
 		return err
@@ -148,17 +148,24 @@ func (h *NoteHandler) AddFileToNote(c *gin.Context, userID *uuid.UUID, filePrefi
 
 }
 
-func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
-	user, err := h.ServiceContaner.UserService.FindUserById(userID)
+func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, noteID uint) error {
+	note, err := h.ServiceContainer.NoteService.GetNoteByID(noteID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "user not found"})
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "note not found"})
+		return err
+	}
+
+	user, err := h.ServiceContainer.UserService.FindUserById(&note.CreatedBy)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return err
 	}
 
 	objects := config.MinioClient.ListObjects(
 		c,
 		user.BucketName,
 		minio.ListObjectsOptions{
-			Prefix: filePrefix,
+			Prefix: note.FilePrefix,
 		},
 	)
 

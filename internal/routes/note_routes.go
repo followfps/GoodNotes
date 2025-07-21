@@ -8,6 +8,7 @@ import (
 	"note1/internal/Middlewares"
 	"note1/internal/handlers"
 	"note1/internal/services"
+	"strconv"
 )
 
 func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer) {
@@ -51,7 +52,22 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 			}
 		})
 
-		noteGroup.Use(Middlewares.Middlewares()).POST("/upload", func(c *gin.Context) {
+		noteGroup.Use(Middlewares.Middlewares()).GET("/files/get/:id", func(c *gin.Context) {
+			id := c.Param("id")
+			idTemp, err := strconv.ParseUint(id, 10, 64)
+			if err != nil {
+				return
+			}
+			iduint := uint(idTemp)
+			err = handler.GetAllFilesForNote(c, iduint)
+			if err != nil {
+				fmt.Println(err, "Files not found")
+				return
+			}
+			fmt.Println("Files found")
+		})
+
+		noteGroup.Use(Middlewares.Middlewares()).POST("/files/upload", func(c *gin.Context) {
 
 			userIDStr := c.Query("userID")
 			if userIDStr == "" {
