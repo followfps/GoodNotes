@@ -4,6 +4,7 @@
     <inspection_tool class="GoDfaErrorMayBeNotNil" enabled="true" level="WARNING" enabled_by_default="true">
       <methods>
         <method importPath="net/http" receiver="*Request" name="FormFile" />
+        <method importPath="note1/internal/services" receiver="UserService" name="FindUserById" />
       </methods>
     </inspection_tool>
     <inspection_tool class="GoUnhandledErrorResult" enabled="true" level="WARNING" enabled_by_default="true">

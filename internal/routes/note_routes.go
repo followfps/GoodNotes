@@ -34,7 +34,7 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 			id := c.Param("userID")
 			userID := uuid.MustParse(id)
 
-			err := handler.CreateNote(c, userID)
+			err := handler.CreateNote(c, &userID)
 			if err != nil {
 				fmt.Println(err, "Note not found")
 				return
@@ -70,7 +70,7 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 				return
 			}
 
-			err = handler.AddFileToNote(c, userID, filePrefix)
+			err = handler.AddFileToNote(c, &userID, filePrefix)
 			if err != nil {
 				return
 			}

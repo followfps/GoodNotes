@@ -16,11 +16,11 @@ import (
 )
 
 type UserHandler struct {
-	ServiceContaner *services.ServicesContainer
+	ServiceContainer *services.ServicesContainer
 }
 
 func NewUserHandler(serviceContainer *services.ServicesContainer) *UserHandler {
-	return &UserHandler{ServiceContaner: serviceContainer}
+	return &UserHandler{ServiceContainer: serviceContainer}
 }
 
 // Login авторизация юзера
@@ -28,7 +28,7 @@ func (u *UserHandler) Login(c *gin.Context, email string, password string) bool 
 	//Подгрузка соли из env
 	jwtSecretKey := os.Getenv("JWT_SECRET_KEY")
 	//поиск юзера по Email
-	user, err := u.ServiceContaner.UserService.FindUserByEmail(email)
+	user, err := u.ServiceContainer.UserService.FindUserByEmail(email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return false
@@ -62,14 +62,14 @@ func (u *UserHandler) Register(c *gin.Context) error {
 	}
 
 	// Проверка валидации email по виду (example@projectx.com)
-	err = u.ServiceContaner.UserService.ValidationEmailCheck(user.Email)
+	err = u.ServiceContainer.UserService.ValidationEmailCheck(user.Email)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Incorrect Email": err.Error()})
 		return err
 	}
 
 	// Проверка есть ли такой имейл в бд
-	exists, err := u.ServiceContaner.UserService.EmailExists(user.Email)
+	exists, err := u.ServiceContainer.UserService.EmailExists(user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return err
@@ -114,7 +114,7 @@ func (u *UserHandler) Register(c *gin.Context) error {
 	user.UserID = uuid.New()
 
 	//Запись юзера в бд
-	err = u.ServiceContaner.UserService.CreateUser(&user)
+	err = u.ServiceContainer.UserService.CreateUser(&user)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err

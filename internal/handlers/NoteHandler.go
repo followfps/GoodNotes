@@ -6,10 +6,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"net/http"
+	url2 "net/url"
 	"note1/internal/config"
 	"note1/internal/models"
 	"note1/internal/services"
 	"strconv"
+	"time"
 )
 
 type NoteHandler struct {
@@ -20,7 +22,7 @@ func NewNoteHandler(serviceContainer *services.ServicesContainer) *NoteHandler {
 	return &NoteHandler{ServiceContaner: serviceContainer}
 }
 
-func (h *NoteHandler) CreateNote(c *gin.Context, id uuid.UUID) error {
+func (h *NoteHandler) CreateNote(c *gin.Context, id *uuid.UUID) error {
 	var note models.Note
 	//распаковка запроса
 	if err := c.ShouldBindJSON(&note); err != nil {
@@ -97,7 +99,7 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 	return nil
 }
 
-func (h *NoteHandler) AddFileToNote(c *gin.Context, userID uuid.UUID, filePrefix string) error {
+func (h *NoteHandler) AddFileToNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
 
 	//поиск юзера
 	user, err := h.ServiceContaner.UserService.FindUserById(userID)
@@ -146,6 +148,44 @@ func (h *NoteHandler) AddFileToNote(c *gin.Context, userID uuid.UUID, filePrefix
 
 }
 
-//func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
-//
-//}
+func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
+	user, err := h.ServiceContaner.UserService.FindUserById(userID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "user not found"})
+	}
+
+	objects := config.MinioClient.ListObjects(
+		c,
+		user.BucketName,
+		minio.ListObjectsOptions{
+			Prefix: filePrefix,
+		},
+	)
+
+	var filesUrl []map[string]string
+
+	for object := range objects {
+		if object.Err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": object.Err.Error()})
+		}
+		url, err := config.MinioClient.PresignedGetObject(
+			c,
+			user.BucketName,
+			object.Key,
+			1*time.Hour,
+			url2.Values{},
+		)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return err
+		}
+
+		filesUrl = append(filesUrl, map[string]string{
+			"filename": object.Key,
+			"url":      url.String(),
+		})
+	}
+	c.JSON(http.StatusOK, filesUrl)
+	return nil
+
+}
