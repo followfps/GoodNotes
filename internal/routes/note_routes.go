@@ -27,7 +27,6 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 				fmt.Println(err, "Note not found")
 				return
 			}
-
 		})
 
 		noteGroup.Use(Middlewares.Middlewares()).POST("/create/:userID", func(c *gin.Context) {
