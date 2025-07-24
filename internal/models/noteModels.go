@@ -10,5 +10,11 @@ type Note struct {
 	NoteName   string
 	NoteBody   string
 	FileBucket string
+	FilePrefix string
 	CreatedBy  uuid.UUID
+	NoteTags
+}
+
+type NoteTags struct {
+	Progroging bool
 }

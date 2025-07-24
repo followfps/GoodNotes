@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"note1/internal/models"
 	"strings"
@@ -99,4 +100,13 @@ func (u *GORMUserRepository) ValidationEmailCheck(email string) bool {
 	}
 	return false
 
+}
+
+func (u *GORMUserRepository) FindUserByID(ID *uuid.UUID) (*models.Users, error) {
+	user := &models.Users{}
+	err := u.db.Where("user_id = ?", ID).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

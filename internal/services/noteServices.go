@@ -10,6 +10,7 @@ type NoteService interface {
 	CreateNote(note *models.Note) error
 	GetNoteByID(id uint) (*models.Note, error)
 	DeleteNote(id uint) error
+	GetNotesFrom(pageInt, limit int) (*[]models.Note, error)
 }
 
 type noteServiceImpl struct {
@@ -37,4 +38,13 @@ func (s *noteServiceImpl) GetNoteByID(id uint) (*models.Note, error) {
 
 func (s *noteServiceImpl) DeleteNote(id uint) error {
 	return s.repo.Delete(id)
+}
+
+func (s *noteServiceImpl) GetNotesFrom(pageInt, limit int) (*[]models.Note, error) {
+
+	notes, err := s.repo.GetNotesFrom(pageInt, limit)
+	if err != nil {
+		return nil, err
+	}
+	return notes, nil
 }

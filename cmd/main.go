@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"log"
+	"net/http"
 	"note1/internal/config"
 	"note1/internal/routes"
 	"note1/internal/services"
@@ -22,17 +23,13 @@ func main() {
 
 	config.InitDB()
 	config.InitMinio()
-	
-	r := gin.New()
 
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
+	r := gin.Default()
 
 	routes.SetupRoutes(r, services.NewServicesContainer())
 
 	// Listen and serve on 0.0.0.0:8080
-	err = r.Run(os.Getenv("mainPort"))
-
+	err = http.ListenAndServe(os.Getenv("mainPort"), r)
 	if err != nil {
 		log.Fatal("Ошибка запуска сервера", err)
 	}
