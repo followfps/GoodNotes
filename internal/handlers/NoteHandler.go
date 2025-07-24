@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -99,10 +100,28 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 	return nil
 }
 
-func (h *NoteHandler) AddFileToNote(c *gin.Context, userID *uuid.UUID, filePrefix string) error {
+func (h *NoteHandler) AddFileToNote(c *gin.Context) error {
+
+	userIDStr := c.Query("userID")
+	if userIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no userID"})
+		return errors.New("no userID")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userID"})
+		return err
+	}
+
+	filePrefix := c.Query("filePrefix")
+	if filePrefix == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no filePrefix"})
+		return errors.New("no filePrefix")
+	}
 
 	//поиск юзера
-	user, err := h.ServiceContainer.UserService.FindUserById(userID)
+	user, err := h.ServiceContainer.UserService.FindUserById(&userID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error, user not found": err.Error()})
 		return err
@@ -195,4 +214,29 @@ func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, noteID uint) error {
 	c.JSON(http.StatusOK, filesUrl)
 	return nil
 
+}
+
+func (h *NoteHandler) GetNotesFrom(c *gin.Context) error {
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
+
+	pageInt, err := strconv.Atoi(pageStr)
+	if err != nil || pageInt < 1 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid page number"})
+		return errors.New("invalid page number")
+	}
+
+	limitInt, err := strconv.Atoi(limitStr)
+	if err != nil || limitInt < 1 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid limit number"})
+		return errors.New("invalid limit number")
+	}
+
+	notes, err := h.ServiceContainer.NoteService.GetNotesFrom(pageInt, limitInt)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return err
+	}
+	c.JSON(http.StatusOK, notes)
+	return nil
 }

@@ -36,3 +36,17 @@ func (r *GORMNoteRepository) Delete(id uint) error {
 	}
 	return nil
 }
+
+func (r *GORMNoteRepository) GetNotesFrom(pageInt, limit int) (*[]models.Note, error) {
+
+	offset := (pageInt - 1) * limit
+
+	var notes []models.Note
+
+	err := r.db.Limit(limit).Offset(offset).Find(&notes).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &notes, nil
+}
