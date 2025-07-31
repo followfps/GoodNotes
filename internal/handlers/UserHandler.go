@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,34 +20,76 @@ func NewUserHandler(serviceContainer *services.ServicesContainer) *UserHandler {
 	return &UserHandler{ServiceContainer: serviceContainer}
 }
 
+// LoginRequest represents login request body
+type LoginRequest struct {
+	Email    string `json:"email" example:"user@example.com"`
+	Password string `json:"password" example:"password123"`
+}
+
+// LoginResponse represents login response
+type LoginResponse struct {
+	Status string      `json:"status"`
+	Body   interface{} `json:"body"`
+}
+
+// RegisterRequest represents register request body
+type RegisterRequest struct {
+	Email    string `json:"email" example:"user@example.com"`
+	Password string `json:"password" example:"password123"`
+}
+
+// RegisterResponse represents register response
+type RegisterResponse struct {
+	Status string      `json:"status"`
+	Body   interface{} `json:"body"`
+}
+
+// LoginHandler godoc
+// @Summary Авторизация пользователя
+// @Description Выполняет авторизацию пользователя через email и пароль
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param credentials body LoginRequest true "Данные для входа"
+// @Success 200 {object} LoginResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/login [post]
+func LoginHandler(serviceContainer *services.ServicesContainer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req LoginRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Вызываем оригинальный метод
+		userHandler := &UserHandler{ServiceContainer: serviceContainer}
+		userHandler.Login(c, req.Email, req.Password)
+	}
+}
+
+// RegisterHandler godoc
+// @Summary Регистрация нового пользователя
+// @Description Регистрирует нового пользователя и создаёт бакет для файлов
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param user body RegisterRequest true "Данные пользователя"
+// @Success 200 {object} RegisterResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/register [post]
+func RegisterHandler(serviceContainer *services.ServicesContainer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Вызываем оригинальный метод
+		userHandler := &UserHandler{ServiceContainer: serviceContainer}
+		userHandler.Register(c)
+	}
+}
+
 // Login авторизация юзера
 func (u *UserHandler) Login(c *gin.Context, email string, password string) {
-	////Подгрузка соли из env
-	//jwtSecretKey := os.Getenv("JWT_SECRET_KEY")
-	////поиск юзера по Email
-	//user, err := u.ServiceContainer.UserService.FindUserByEmail(email)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//	return false
-	//}
-	//// Проверка пароля
-	//err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//	return false
-	//}
-	////Создание и отправка JWT токена
-	//token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-	//	"email": email,
-	//	"exp":   time.Now().Add(time.Hour * 24).Unix(),
-	//})
-	//tokenString, err := token.SignedString([]byte(jwtSecretKey))
-	//if err != nil {
-	//	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	//}
-	//c.JSON(http.StatusOK, gin.H{"token": tokenString})
-	//return true
-
 	requestBody := struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -76,78 +119,21 @@ func (u *UserHandler) Login(c *gin.Context, email string, password string) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	for key, value := range resp.Header {
+		for _, value := range value {
+			c.Header(key, value)
+		}
+	}
+
+	_, err = io.Copy(c.Writer, resp.Body)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	c.JSON(200, gin.H{"status": resp.Status, "body": body})
-
 }
 
 // Register Регистрация юзера и создания бакета для файлов закреплённого за юзером
 func (u *UserHandler) Register(c *gin.Context) error {
-	//var user models.Users
-	//err := c.ShouldBindJSON(&user)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//	return err
-	//}
-	//
-	//// Проверка валидации email по виду (example@projectx.com)
-	//err = u.ServiceContainer.UserService.ValidationEmailCheck(user.Email)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"Incorrect Email": err.Error()})
-	//	return err
-	//}
-	//
-	//// Проверка есть ли такой имейл в бд
-	//exists, err := u.ServiceContainer.UserService.EmailExists(user.Email)
-	//if err != nil {
-	//	c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
-	//	return err
-	//}
-	//if exists {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": "Email already exists"})
-	//	return err
-	//}
-	//
-	//// Хэширование пароля
-	//hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//}
-	//user.Password = string(hashedPassword)
-	//
-	////создание слуачйного имени бакета
-	//BucketName := uuid.NewString()
-	//
-	//if temp, _ := config.MinioClient.BucketExists(c, BucketName); temp {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": "Bucket exists"})
-	//} else {
-	//	err = config.MinioClient.MakeBucket(c, BucketName, minio.MakeBucketOptions{})
-	//	if err != nil {
-	//		c.JSON(http.StatusInternalServerError, gin.H{"error, cant create bucket for user": err.Error()})
-	//	} else {
-	//		user.BucketName = BucketName
-	//		fmt.Println("Create bucket ok")
-	//	}
-	//}
-	//
-	////Создаётся юзер ID
-	//user.UserID = uuid.New()
-	//
-	////Запись юзера в бд
-	//err = u.ServiceContainer.UserService.CreateUser(&user)
-	//if err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//	return err
-	//}
-	//
-	//userIDTemp := user.UserID.String()
-	//c.JSON(http.StatusOK, gin.H{"user": user})
-	//c.JSON(http.StatusOK, gin.H{"user": userIDTemp})
-	//return nil
 
 	var user models.Users
 	err := c.ShouldBindJSON(&user)
@@ -190,7 +176,3 @@ func (u *UserHandler) Register(c *gin.Context) error {
 	c.JSON(200, gin.H{"status": resp.Status, "body": body})
 	return nil
 }
-
-//func (u *UserHandler) GetAllUsers(c *gin.Context) *[]models.Users {
-//	return &[]models.Users{}
-//}

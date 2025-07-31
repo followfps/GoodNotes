@@ -3,7 +3,6 @@ package routes
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"note1/internal/Middlewares"
 	"note1/internal/handlers"
 	"note1/internal/services"
@@ -38,9 +37,8 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 		noteGroup.Use(Middlewares.Middlewares()).POST("/create/:userID", func(c *gin.Context) {
 
 			id := c.Param("userID")
-			userID := uuid.MustParse(id)
 
-			err := handler.CreateNote(c, &userID)
+			err := handler.CreateNote(c, id)
 			if err != nil {
 				fmt.Println(err, "Note not found")
 				return
@@ -63,8 +61,8 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 			if err != nil {
 				return
 			}
-			iduint := uint(idTemp)
-			err = handler.GetAllFilesForNote(c, iduint)
+			idUint := uint(idTemp)
+			err = handler.GetAllFilesForNote(c, idUint)
 			if err != nil {
 				fmt.Println(err, "Files not found")
 				return
@@ -79,6 +77,6 @@ func noteRoutesSetup(r *gin.Engine, serviceContainer *services.ServicesContainer
 			}
 
 		})
-		
+
 	}
 }

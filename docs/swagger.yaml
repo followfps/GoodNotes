@@ -1,0 +1,333 @@
+basePath: /
+definitions:
+  handlers.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  handlers.LoginResponse:
+    properties:
+      body: {}
+      status:
+        type: string
+    type: object
+  handlers.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    type: object
+  handlers.RegisterResponse:
+    properties:
+      body: {}
+      status:
+        type: string
+    type: object
+  models.Note:
+    properties:
+      created_at:
+        description: |-
+          CreatedAt Дата и время создания заметки.
+          required: true
+        type: string
+      created_by:
+        description: |-
+          CreatedBy UUID пользователя, создавшего заметку.
+          example: 550e8400-e29b-41d4-a716-446655440000
+          format: uuid
+        type: string
+      deleted_at:
+        description: |-
+          DeletedAt Дата и время удаления заметки (если удалена). Используется для мягкого удаления.
+          format: date-time
+        format: date-time
+        type: string
+      file_bucket:
+        description: |-
+          FileBucket Имя бакета в MinIO, где хранятся файлы заметки.
+          example: user_bucket_abc123
+        type: string
+      file_prefix:
+        description: |-
+          FilePrefix Префикс для файлов этой заметки в MinIO.
+          example: note_12345678
+        type: string
+      id:
+        description: |-
+          ID Уникальный идентификатор заметки.
+          required: true
+        type: integer
+      note_body:
+        description: |-
+          NoteBody Текст заметки.
+          example: Это содержимое моей заметки.
+        type: string
+      note_name:
+        description: |-
+          NoteName Название заметки.
+          example: Моя заметка
+        type: string
+      updated_at:
+        description: |-
+          UpdatedAt Дата и время последнего обновления заметки.
+          required: true
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API server for creating and reading notes
+  title: Note App API
+  version: "1.0"
+paths:
+  /note/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет заметку по её уникальному идентификатору
+      parameters:
+      - description: ID заметки
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заметка удалена
+          schema:
+            type: string
+        "404":
+          description: Заметка не найдена
+          schema:
+            type: string
+      summary: Удаление заметки по ID
+      tags:
+      - notes
+    get:
+      consumes:
+      - application/json
+      description: Возвращает заметку по её уникальному идентификатору
+      parameters:
+      - description: ID заметки
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заметка найдена
+          schema:
+            $ref: '#/definitions/models.Note'
+        "404":
+          description: Заметка не найдена
+          schema:
+            type: string
+      summary: Получение заметки по ID
+      tags:
+      - notes
+  /note/create/{userID}:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую заметку для пользователя
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Заметка создана
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Некорректный запрос
+          schema:
+            type: string
+        "404":
+          description: Пользователь не найден
+          schema:
+            type: string
+      summary: Создание новой заметки
+      tags:
+      - notes
+  /note/files/get/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает все файлы, прикреплённые к заметке
+      parameters:
+      - description: ID заметки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список файлов с URL
+          schema:
+            items:
+              additionalProperties:
+                type: string
+              type: object
+            type: array
+        "404":
+          description: Файлы не найдены
+          schema:
+            type: string
+      summary: Получение всех файлов к заметке
+      tags:
+      - files
+  /note/files/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает файл и привязывает его к заметке
+      parameters:
+      - description: ID пользователя
+        in: formData
+        name: userID
+        required: true
+        type: string
+      - description: Файл
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Префикс файла
+        in: formData
+        name: filePrefix
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Файлы успешно загружены
+          schema:
+            type: string
+        "400":
+          description: Ошибка загрузки файла
+          schema:
+            type: string
+      summary: Загрузка файла к заметке
+      tags:
+      - files
+  /note/list:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех заметок
+      parameters:
+      - description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - description: Количество записей на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список заметок
+          schema:
+            items:
+              $ref: '#/definitions/models.Note'
+            type: array
+      summary: Список указанного количества заметок
+      tags:
+      - notes
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: Выполняет авторизацию пользователя через email и пароль
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Авторизация пользователя
+      tags:
+      - Auth
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      description: Регистрирует нового пользователя и создаёт бакет для файлов
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Регистрация нового пользователя
+      tags:
+      - Auth
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
