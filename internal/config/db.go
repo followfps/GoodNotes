@@ -11,6 +11,7 @@ import (
 
 var DBNote *gorm.DB
 var DBUsers *gorm.DB
+var DBTags *gorm.DB
 
 func InitDB() {
 
@@ -50,6 +51,18 @@ func InitDB() {
 		log.Println("failed to auto migrate database Users: " + err.Error())
 	}
 	fmt.Println("database Users auto migrate success")
+
+	DBTags, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database: " + err.Error())
+	}
+	fmt.Println("database tags connect success")
+
+	err = DBUsers.AutoMigrate(&models.Tags{})
+	if err != nil {
+		log.Println("failed to auto migrate database Tags: " + err.Error())
+	}
+	fmt.Println("database Tags auto migrate success")
 
 	//RepoNote := repositories.NewGORMNoteRepository(DBNote)
 	//RepoUser := repositories.NewGORMUserRepository(DBUsers)

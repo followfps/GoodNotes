@@ -9,6 +9,7 @@ import (
 type ServicesContainer struct {
 	NoteService NoteService
 	UserService UserService
+	TagService  TagServices
 }
 
 func NewServicesContainer() *ServicesContainer {
@@ -18,8 +19,12 @@ func NewServicesContainer() *ServicesContainer {
 	userRepo := repositories.NewGORMUserRepository(config.DBUsers)
 	userService := NewUserService(userRepo)
 
+	tagRepo := repositories.NewTegReppo(config.DBTags)
+	TagService := NewTagService(tagRepo)
+
 	return &ServicesContainer{
 		NoteService: noteService,
 		UserService: userService,
+		TagService:  TagService,
 	}
 }

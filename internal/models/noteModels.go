@@ -42,4 +42,52 @@ type Note struct {
 	// example: 550e8400-e29b-41d4-a716-446655440000
 	// format: uuid
 	CreatedBy uuid.UUID `json:"created_by"`
+
+	// Tags Список тегов, связанных с заметкой.
+	// example: [{"id": 1, "name": "Важное", "slug": "vazhnoe", "note_count": 5}]
+	Tags []*Tags `json:"tags" gorm:"many2many:note_tags;"`
+}
+
+// Tags Структура для хранения тега.
+//
+// swagger:model Tag
+type Tags struct {
+	// Id Уникальный идентификатор тега.
+	// required: true
+	// example: 1
+	Id uint `json:"id" gorm:"primarykey"`
+
+	// Name Название тега.
+	// example: Код
+	// required: true
+	Name string `json:"name" gorm:"type:varchar(100);not null;uniqueIndex"`
+
+	// Slug URL-дружественная версия названия тега.
+	// example: vazhnoe
+	// required: true
+	Slug string `json:"slug" gorm:"type:varchar(100); not null; uniqueIndex"`
+
+	// Notes Список заметок, связанных с этим тегом.
+	// example: [{"id": 1, "note_name": "Моя заметка", "note_body": "Содержимое"}]
+	Notes []*Note `json:"notes,omitempty" gorm:"many2many:note_tags;"`
+
+	// NoteCount Количество заметок с этим тегом.
+	// example: 5
+	// required: true
+	NoteCount uint `json:"note_count"`
+}
+
+// NoteTag Структура для связи заметок и тегов.
+//
+// swagger:model NoteTag
+type NoteTag struct {
+	// NoteId Идентификатор заметки.
+	// required: true
+	// example: 1
+	NoteId uint `json:"note_id" gorm:"primarykey"`
+
+	// TagId Идентификатор тега.
+	// required: true
+	// example: 1
+	TagId uint `json:"tag_id" gorm:"primarykey"`
 }

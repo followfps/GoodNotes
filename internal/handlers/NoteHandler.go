@@ -23,15 +23,17 @@ func NewNoteHandler(serviceContainer *services.ServicesContainer) *NoteHandler {
 	return &NoteHandler{ServiceContainer: serviceContainer}
 }
 
-// @Summary Создание новой заметки
-// @Description Создаёт новую заметку для пользователя
+// CreateNote создает новую заметку
+// @Summary Создать заметку
+// @Description Создает новую заметку для указанного пользователя
 // @Tags notes
 // @Accept json
 // @Produce json
-// @Param userID path string true "ID пользователя"
-// @Success 201 {object} map[string]interface{} "Заметка создана"
-// @Failure 400 {string} string "Некорректный запрос"
-// @Failure 404 {string} string "Пользователь не найден"
+// @Param userID path string true "UUID пользователя"
+// @Param note body models.Note true "Данные заметки"
+// @Success 201 {object} map[string]interface{} "Note created"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /note/create/{userID} [post]
 func CreateNoteHandler(h *NoteHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -69,7 +71,7 @@ func (h *NoteHandler) CreateNote(c *gin.Context, id string) error {
 	note.FilePrefix = uuid.NewString()
 
 	//Создание note в бд
-	if err := h.ServiceContainer.NoteService.CreateNote(&note); err != nil {
+	if err := h.ServiceContainer.NoteService.CreateNote(c, &note); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
 	}
@@ -88,14 +90,16 @@ func (h *NoteHandler) CreateNote(c *gin.Context, id string) error {
 	return nil
 }
 
-// @Summary Получение заметки по ID
-// @Description Возвращает заметку по её уникальному идентификатору
+// GetNoteByID получает заметку по ID
+// @Summary Получить заметку по ID
+// @Description Получает детали заметки по её идентификатору
 // @Tags notes
-// @Accept json
 // @Produce json
 // @Param id path string true "ID заметки"
-// @Success 200 {object} models.Note "Заметка найдена"
-// @Failure 404 {string} string "Заметка не найдена"
+// @Success 200 {object} models.Note
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 404 {object} map[string]string "Note not found"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /note/{id} [get]
 func GetNoteByIDHandler(h *NoteHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -118,7 +122,7 @@ func (h *NoteHandler) GetNoteByID(c *gin.Context, id string) error {
 
 	uintId := uint(noteID)
 
-	note, err = h.ServiceContainer.NoteService.GetNoteByID(uintId)
+	note, err = h.ServiceContainer.NoteService.GetNoteByID(c, uintId)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
@@ -128,14 +132,15 @@ func (h *NoteHandler) GetNoteByID(c *gin.Context, id string) error {
 	return nil
 }
 
-// @Summary Удаление заметки по ID
-// @Description Удаляет заметку по её уникальному идентификатору
+// DeleteNoteById удаляет заметку по ID
+// @Summary Удалить заметку
+// @Description Удаляет заметку по её идентификатору
 // @Tags notes
-// @Accept json
 // @Produce json
 // @Param id path string true "ID заметки"
-// @Success 200 {string} string "Заметка удалена"
-// @Failure 404 {string} string "Заметка не найдена"
+// @Success 200 {object} string "Note deleted successfully"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /note/{id} [delete]
 func DeleteNoteByIdHandler(h *NoteHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -157,7 +162,7 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 
 	uintID := uint(noteID)
 
-	err = h.ServiceContainer.NoteService.DeleteNote(uintID)
+	err = h.ServiceContainer.NoteService.DeleteNote(c, uintID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err
@@ -168,16 +173,18 @@ func (h *NoteHandler) DeleteNoteById(c *gin.Context, id string) error {
 	return nil
 }
 
-// @Summary Загрузка файла к заметке
-// @Description Загружает файл и привязывает его к заметке
+// AddFileToNote добавляет файлы к заметке
+// @Summary Добавить файлы к заметке
+// @Description Загружает файлы в MinIO и связывает их с заметкой
 // @Tags files
 // @Accept multipart/form-data
 // @Produce json
-// @Param userID formData string true "ID пользователя"
-// @Param file formData file true "Файл"
-// @Param filePrefix formData string true "Префикс файла"
-// @Success 201 {string} string "Файлы успешно загружены"
-// @Failure 400 {string} string "Ошибка загрузки файла"
+// @Param userID query string true "UUID пользователя"
+// @Param filePrefix query string true "Префикс файлов заметки"
+// @Param file formData file true "Файлы для загрузки"
+// @Success 201 {object} string "Files added successfully"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /note/files/upload [post]
 func AddFileToNoteHandler(h *NoteHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -256,14 +263,15 @@ func (h *NoteHandler) AddFileToNote(c *gin.Context) error {
 
 }
 
-// @Summary Получение всех файлов к заметке
-// @Description Возвращает все файлы, прикреплённые к заметке
+// GetAllFilesForNote получает все файлы для заметки
+// @Summary Получить все файлы заметки
+// @Description Получает список файлов с пресигнутыми URL для указанной заметки
 // @Tags files
-// @Accept json
 // @Produce json
-// @Param id path uint true "ID заметки"
+// @Param id path string true "ID заметки"
 // @Success 200 {array} map[string]string "Список файлов с URL"
-// @Failure 404 {string} string "Файлы не найдены"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /note/files/get/{id} [get]
 func GetAllFilesForNoteHandler(h *NoteHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -281,7 +289,7 @@ func GetAllFilesForNoteHandler(h *NoteHandler) gin.HandlerFunc {
 }
 
 func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, noteID uint) error {
-	note, err := h.ServiceContainer.NoteService.GetNoteByID(noteID)
+	note, err := h.ServiceContainer.NoteService.GetNoteByID(c, noteID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "note not found"})
 		return err
@@ -330,14 +338,16 @@ func (h *NoteHandler) GetAllFilesForNote(c *gin.Context, noteID uint) error {
 
 }
 
-// @Summary Список указанного количества заметок
-// @Description Возвращает список всех заметок
+// GetNotesFrom получает список заметок с пагинацией
+// @Summary Получить список заметок
+// @Description Получает список всех заметок с пагинацией
 // @Tags notes
-// @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы"
-// @Param limit query int false "Количество записей на странице"
-// @Success 200 {array} models.Note "Список заметок"
+// @Param page query string false "Номер страницы" default(1)
+// @Param limit query string false "Количество элементов на странице" default(10)
+// @Success 200 {array} models.Note
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /note/list [get]
 func GetNotesFromHandler(h *NoteHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -365,7 +375,7 @@ func (h *NoteHandler) GetNotesFrom(c *gin.Context) error {
 		return errors.New("invalid limit number")
 	}
 
-	notes, err := h.ServiceContainer.NoteService.GetNotesFrom(pageInt, limitInt)
+	notes, err := h.ServiceContainer.NoteService.GetNotesFrom(c, pageInt, limitInt)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return err

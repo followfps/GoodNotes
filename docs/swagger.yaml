@@ -74,9 +74,50 @@ definitions:
           NoteName Название заметки.
           example: Моя заметка
         type: string
+      tags:
+        description: |-
+          Tags Список тегов, связанных с заметкой.
+          example: [{"id": 1, "name": "Важное", "slug": "vazhnoe", "note_count": 5}]
+        items:
+          $ref: '#/definitions/models.Tags'
+        type: array
       updated_at:
         description: |-
           UpdatedAt Дата и время последнего обновления заметки.
+          required: true
+        type: string
+    type: object
+  models.Tags:
+    properties:
+      id:
+        description: |-
+          Id Уникальный идентификатор тега.
+          required: true
+          example: 1
+        type: integer
+      name:
+        description: |-
+          Name Название тега.
+          example: Код
+          required: true
+        type: string
+      note_count:
+        description: |-
+          NoteCount Количество заметок с этим тегом.
+          example: 5
+          required: true
+        type: integer
+      notes:
+        description: |-
+          Notes Список заметок, связанных с этим тегом.
+          example: [{"id": 1, "note_name": "Моя заметка", "note_body": "Содержимое"}]
+        items:
+          $ref: '#/definitions/models.Note'
+        type: array
+      slug:
+        description: |-
+          Slug URL-дружественная версия названия тега.
+          example: vazhnoe
           required: true
         type: string
     type: object
@@ -89,9 +130,7 @@ info:
 paths:
   /note/{id}:
     delete:
-      consumes:
-      - application/json
-      description: Удаляет заметку по её уникальному идентификатору
+      description: Удаляет заметку по её идентификатору
       parameters:
       - description: ID заметки
         in: path
@@ -102,20 +141,26 @@ paths:
       - application/json
       responses:
         "200":
-          description: Заметка удалена
+          description: Note deleted successfully
           schema:
             type: string
-        "404":
-          description: Заметка не найдена
+        "400":
+          description: Bad request
           schema:
-            type: string
-      summary: Удаление заметки по ID
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить заметку
       tags:
       - notes
     get:
-      consumes:
-      - application/json
-      description: Возвращает заметку по её уникальному идентификатору
+      description: Получает детали заметки по её идентификатору
       parameters:
       - description: ID заметки
         in: path
@@ -126,57 +171,79 @@ paths:
       - application/json
       responses:
         "200":
-          description: Заметка найдена
+          description: OK
           schema:
             $ref: '#/definitions/models.Note'
-        "404":
-          description: Заметка не найдена
+        "400":
+          description: Bad request
           schema:
-            type: string
-      summary: Получение заметки по ID
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Note not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить заметку по ID
       tags:
       - notes
   /note/create/{userID}:
     post:
       consumes:
       - application/json
-      description: Создаёт новую заметку для пользователя
+      description: Создает новую заметку для указанного пользователя
       parameters:
-      - description: ID пользователя
+      - description: UUID пользователя
         in: path
         name: userID
         required: true
         type: string
+      - description: Данные заметки
+        in: body
+        name: note
+        required: true
+        schema:
+          $ref: '#/definitions/models.Note'
       produces:
       - application/json
       responses:
         "201":
-          description: Заметка создана
+          description: Note created
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Некорректный запрос
+          description: Bad request
           schema:
-            type: string
-        "404":
-          description: Пользователь не найден
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
           schema:
-            type: string
-      summary: Создание новой заметки
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать заметку
       tags:
       - notes
   /note/files/get/{id}:
     get:
-      consumes:
-      - application/json
-      description: Возвращает все файлы, прикреплённые к заметке
+      description: Получает список файлов с пресигнутыми URL для указанной заметки
       parameters:
       - description: ID заметки
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -188,72 +255,100 @@ paths:
                 type: string
               type: object
             type: array
-        "404":
-          description: Файлы не найдены
+        "400":
+          description: Bad request
           schema:
-            type: string
-      summary: Получение всех файлов к заметке
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить все файлы заметки
       tags:
       - files
   /note/files/upload:
     post:
       consumes:
       - multipart/form-data
-      description: Загружает файл и привязывает его к заметке
+      description: Загружает файлы в MinIO и связывает их с заметкой
       parameters:
-      - description: ID пользователя
-        in: formData
+      - description: UUID пользователя
+        in: query
         name: userID
         required: true
         type: string
-      - description: Файл
+      - description: Префикс файлов заметки
+        in: query
+        name: filePrefix
+        required: true
+        type: string
+      - description: Файлы для загрузки
         in: formData
         name: file
         required: true
         type: file
-      - description: Префикс файла
-        in: formData
-        name: filePrefix
-        required: true
-        type: string
       produces:
       - application/json
       responses:
         "201":
-          description: Файлы успешно загружены
+          description: Files added successfully
           schema:
             type: string
         "400":
-          description: Ошибка загрузки файла
+          description: Bad request
           schema:
-            type: string
-      summary: Загрузка файла к заметке
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Добавить файлы к заметке
       tags:
       - files
   /note/list:
     get:
-      consumes:
-      - application/json
-      description: Возвращает список всех заметок
+      description: Получает список всех заметок с пагинацией
       parameters:
-      - description: Номер страницы
+      - default: "1"
+        description: Номер страницы
         in: query
         name: page
-        type: integer
-      - description: Количество записей на странице
+        type: string
+      - default: "10"
+        description: Количество элементов на странице
         in: query
         name: limit
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Список заметок
+          description: OK
           schema:
             items:
               $ref: '#/definitions/models.Note'
             type: array
-      summary: Список указанного количества заметок
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить список заметок
       tags:
       - notes
   /user/login:

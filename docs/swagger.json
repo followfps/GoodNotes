@@ -11,7 +11,7 @@
     "paths": {
         "/note/create/{userID}": {
             "post": {
-                "description": "Создаёт новую заметку для пользователя",
+                "description": "Создает новую заметку для указанного пользователя",
                 "consumes": [
                     "application/json"
                 ],
@@ -21,34 +21,49 @@
                 "tags": [
                     "notes"
                 ],
-                "summary": "Создание новой заметки",
+                "summary": "Создать заметку",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID пользователя",
+                        "description": "UUID пользователя",
                         "name": "userID",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Данные заметки",
+                        "name": "note",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Note"
+                        }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Заметка создана",
+                        "description": "Note created",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Некорректный запрос",
+                        "description": "Bad request",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
-                    "404": {
-                        "description": "Пользователь не найден",
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -56,20 +71,17 @@
         },
         "/note/files/get/{id}": {
             "get": {
-                "description": "Возвращает все файлы, прикреплённые к заметке",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Получает список файлов с пресигнутыми URL для указанной заметки",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "files"
                 ],
-                "summary": "Получение всех файлов к заметке",
+                "summary": "Получить все файлы заметки",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "ID заметки",
                         "name": "id",
                         "in": "path",
@@ -89,10 +101,22 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "Файлы не найдены",
+                    "400": {
+                        "description": "Bad request",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -100,7 +124,7 @@
         },
         "/note/files/upload": {
             "post": {
-                "description": "Загружает файл и привязывает его к заметке",
+                "description": "Загружает файлы в MinIO и связывает их с заметкой",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -110,41 +134,53 @@
                 "tags": [
                     "files"
                 ],
-                "summary": "Загрузка файла к заметке",
+                "summary": "Добавить файлы к заметке",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID пользователя",
+                        "description": "UUID пользователя",
                         "name": "userID",
-                        "in": "formData",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Префикс файлов заметки",
+                        "name": "filePrefix",
+                        "in": "query",
                         "required": true
                     },
                     {
                         "type": "file",
-                        "description": "Файл",
+                        "description": "Файлы для загрузки",
                         "name": "file",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Префикс файла",
-                        "name": "filePrefix",
                         "in": "formData",
                         "required": true
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "Файлы успешно загружены",
+                        "description": "Files added successfully",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "400": {
-                        "description": "Ошибка загрузки файла",
+                        "description": "Bad request",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -152,38 +188,55 @@
         },
         "/note/list": {
             "get": {
-                "description": "Возвращает список всех заметок",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Получает список всех заметок с пагинацией",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "notes"
                 ],
-                "summary": "Список указанного количества заметок",
+                "summary": "Получить список заметок",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
+                        "default": "1",
                         "description": "Номер страницы",
                         "name": "page",
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "Количество записей на странице",
+                        "type": "string",
+                        "default": "10",
+                        "description": "Количество элементов на странице",
                         "name": "limit",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список заметок",
+                        "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/models.Note"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
                             }
                         }
                     }
@@ -192,17 +245,14 @@
         },
         "/note/{id}": {
             "get": {
-                "description": "Возвращает заметку по её уникальному идентификатору",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Получает детали заметки по её идентификатору",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "notes"
                 ],
-                "summary": "Получение заметки по ID",
+                "summary": "Получить заметку по ID",
                 "parameters": [
                     {
                         "type": "string",
@@ -214,31 +264,49 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Заметка найдена",
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/models.Note"
                         }
                     },
-                    "404": {
-                        "description": "Заметка не найдена",
+                    "400": {
+                        "description": "Bad request",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Note not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
             },
             "delete": {
-                "description": "Удаляет заметку по её уникальному идентификатору",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Удаляет заметку по её идентификатору",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "notes"
                 ],
-                "summary": "Удаление заметки по ID",
+                "summary": "Удалить заметку",
                 "parameters": [
                     {
                         "type": "string",
@@ -250,15 +318,27 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Заметка удалена",
+                        "description": "Note deleted successfully",
                         "schema": {
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Заметка не найдена",
+                    "400": {
+                        "description": "Bad request",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -450,8 +530,43 @@
                     "description": "NoteName Название заметки.\nexample: Моя заметка",
                     "type": "string"
                 },
+                "tags": {
+                    "description": "Tags Список тегов, связанных с заметкой.\nexample: [{\"id\": 1, \"name\": \"Важное\", \"slug\": \"vazhnoe\", \"note_count\": 5}]",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Tags"
+                    }
+                },
                 "updated_at": {
                     "description": "UpdatedAt Дата и время последнего обновления заметки.\nrequired: true",
+                    "type": "string"
+                }
+            }
+        },
+        "models.Tags": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Id Уникальный идентификатор тега.\nrequired: true\nexample: 1",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "Name Название тега.\nexample: Код\nrequired: true",
+                    "type": "string"
+                },
+                "note_count": {
+                    "description": "NoteCount Количество заметок с этим тегом.\nexample: 5\nrequired: true",
+                    "type": "integer"
+                },
+                "notes": {
+                    "description": "Notes Список заметок, связанных с этим тегом.\nexample: [{\"id\": 1, \"note_name\": \"Моя заметка\", \"note_body\": \"Содержимое\"}]",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Note"
+                    }
+                },
+                "slug": {
+                    "description": "Slug URL-дружественная версия названия тега.\nexample: vazhnoe\nrequired: true",
                     "type": "string"
                 }
             }

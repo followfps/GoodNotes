@@ -4,31 +4,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"note1/internal/auth"
+	"strings"
 )
 
 func Middlewares() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		tokenString := c.Request.Header.Get("Authorization")
-		if tokenString == "" {
+		authHeader := c.Request.Header.Get("Authorization")
+		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No Authorization header found"})
+			return
 		}
 
-		//token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		//	return []byte(os.Getenv("JWT_SECRET_KEY")), nil
-		//})
-		//if err != nil {
-		//	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-		//}
-		//
-		//if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		//	c.Set("UserEmail", claims["email"])
-		//} else {
-		//	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No Authorization header found"})
-		//	return
-		//}
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			authHeader = authHeader[7:]
+		}
 
-		userID, err := auth.ValidateToken(tokenString)
+		userID, err := auth.ValidateToken(authHeader)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
